@@ -18,7 +18,8 @@
     const playerId = new URLSearchParams(window.location.search).get("player") || "P1";
     const roomId = new URLSearchParams(window.location.search).get("game") || "demo";
 
-    const socket = new WebSocket("ws://localhost:3000"); // Change this when deployed
+    // const socket = new WebSocket("ws://localhost:3000"); // Change this when deployed
+    const socket = new WebSocket("wss://multiplayer-grid-game-fe24.onrender.com");
 
     let gameState = null;
 
