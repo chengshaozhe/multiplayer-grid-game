@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>2-Player Grid Game</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; }
+    canvas { border: 1px solid #ccc; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>2-Player Turn-Based Grid Game</h1>
+  <p id="turnDisplay">Connecting...</p>
+  <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+  <script>
+    const playerId = new URLSearchParams(window.location.search).get("player") || "P1";
+    const roomId = new URLSearchParams(window.location.search).get("game") || "demo";
+
+    const socket = new WebSocket("ws://localhost:3000"); // Change this when deployed
+
+    let gameState = null;
+
+    socket.onopen = () => {
+      socket.send(JSON.stringify({ type: "join", roomId, playerId }));
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "init" || msg.type === "update") {
+        gameState = msg.state;
+        draw(gameState);
+      }
+    };
+
+    function sendMove(dx, dy) {
+      if (!gameState || gameState.turn !== playerId) return;
+      socket.send(JSON.stringify({
+        type: "move",
+        roomId,
+        playerId,
+        payload: { dx, dy }
+      }));
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (playerId === "P1") {
+        if (e.key === "ArrowUp") sendMove(0, -1);
+        if (e.key === "ArrowDown") sendMove(0, 1);
+        if (e.key === "ArrowLeft") sendMove(-1, 0);
+        if (e.key === "ArrowRight") sendMove(1, 0);
+      } else if (playerId === "P2") {
+        if (e.key === "w") sendMove(0, -1);
+        if (e.key === "s") sendMove(0, 1);
+        if (e.key === "a") sendMove(-1, 0);
+        if (e.key === "d") sendMove(1, 0);
+      }
+    });
+
+    function draw(state) {
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      const gridSize = state.gridSize;
+      const cellSize = canvas.width / gridSize;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let x = 0; x < gridSize; x++) {
+        for (let y = 0; y < gridSize; y++) {
+          ctx.strokeStyle = "#ccc";
+          ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        }
+      }
+
+      ctx.fillStyle = "red";
+      ctx.beginPath();
+      ctx.arc(state.P1.x * cellSize + cellSize / 2, state.P1.y * cellSize + cellSize / 2, cellSize * 0.4, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.fillStyle = "orange";
+      ctx.beginPath();
+      ctx.arc(state.P2.x * cellSize + cellSize / 2, state.P2.y * cellSize + cellSize / 2, cellSize * 0.4, 0, 2 * Math.PI);
+      ctx.fill();
+
+      document.getElementById("turnDisplay").textContent = `Current turn: ${state.turn}`;
+    }
+  </script>
+</body>
+</html>
